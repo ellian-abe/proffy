@@ -1,15 +1,19 @@
 const Database = require('./database/db')
-const { subjects, weekdays, getSubject, converHoursToMinutes} = require('./utils/format')
+const { subjects, weekdays, getSubject, convertHoursToMinutes} = require('./utils/format')
 
 function pageLanding(req, res) {
     return res.render("index.html")
 }
 
 async function pageStudy(req, res) {
-    const filters = req.body
+    const filters = req.query
+
     let query = ""
 
-    if (!filters.subject || !filters.weekday || !filters.time) {
+    if (!filters.subject
+        || !filters.weekday
+        || !filters.time) {
+
         query = `
             SELECT  classes.*, proffys.*
             FROM    proffys JOIN    classes ON (proffys.id = classes.proffy_id)
@@ -20,7 +24,7 @@ async function pageStudy(req, res) {
             )
         `
     } else {
-        const timeToMinutes = converHoursToMinutes(filters.time)
+        const timeToMinutes = convertHoursToMinutes(filters.time)
 
         query = `
             SELECT  classes.*, proffys.*
@@ -39,11 +43,6 @@ async function pageStudy(req, res) {
         `
     }
 
-    // converter horas em minutos
-    
-
-    // caso haja erro na consulta do bd
-
     try {
         const db = await Database
         const proffys = await db.all(query)
@@ -51,14 +50,12 @@ async function pageStudy(req, res) {
         proffys.map((proffy) => {
             proffy.subject = getSubject(proffy.subject)
         })
-
+    
         return res.render('study.html', {proffys, subjects, filters, weekdays})
 
     } catch (error) {
         console.log(error)
     }
-
-
 }
 
 function pageGiveClasses(req, res) {
@@ -84,8 +81,8 @@ async function saveClasses(req, res) {
     (weekday, index) => {
         return {
             weekday,
-            time_from: converHoursToMinutes(req.body.time_from[index]),
-            time_to: converHoursToMinutes(req.body.time_to[index])
+            time_from: convertHoursToMinutes(req.body.time_from[index]),
+            time_to: convertHoursToMinutes(req.body.time_to[index])
         }
     })
 
@@ -95,7 +92,7 @@ async function saveClasses(req, res) {
 
         let queryString = "?subject=" +req.body.subject
         queryString += "&weekday=" + req.body.weekday[0]
-        queryString += "&time=" + req.body.time_from[0]
+        queryString += "&time=" + req.body.time_from[0].replace(':','%3A')
 
         return res.redirect("/study" + queryString)
     } catch (error) {
